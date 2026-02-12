@@ -4,57 +4,75 @@ import VideoPlayer from "./VideoPlayer";
 
 export default function VideoReel() {
   const location = useLocation();
-  
-  // 1. Data Setup
   const allVideos = useMemo(() => location.state?.videos || [], [location.state]);
-  const userLoadCount = location.state?.loadCount || 6; // User jo bhi number de
+  const userLoadCount = location.state?.loadCount || 6;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef(null);
   const isAdjusting = useRef(false);
 
-  // 2. Intersection Observer: Center video detect karne ke liye
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !isAdjusting.current) {
-            const index = parseInt(entry.target.getAttribute("data-index"));
-            setCurrentIndex(index);
-          }
-        });
-      },
-      { threshold: 0.7 } // Jab 70% video screen par ho
-    );
+  const observer = new IntersectionObserver(
+    (entries) => {
+      // Sirf tab update karein jab hum jump NA kar rahe hon
+      if (isAdjusting.current) return; 
 
-    document.querySelectorAll(".v-container").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [allVideos]);
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          const index = parseInt(entry.target.getAttribute("data-index"));
+          setCurrentIndex(index);
+        }
+      });
+    },
+    { threshold: [0.6] } 
+  );
 
-  // 3. Infinite Loop Reset Logic
+  const elements = document.querySelectorAll(".v-container");
+  elements.forEach((el) => observer.observe(el));
+  return () => observer.disconnect();
+}, [allVideos]); // currentIndex ko yahan dependency mein mat dalna
+
   const handleScroll = (e) => {
-    if (isAdjusting.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const threshold = 5; 
+  const container = e.target;
+  if (isAdjusting.current) return;
 
-    if (scrollTop + clientHeight >= scrollHeight - threshold) {
-      isAdjusting.current = true;
-      e.target.style.scrollSnapType = "none";
-      e.target.scrollTop = 5; 
+  const { scrollTop, scrollHeight, clientHeight } = container;
+  const threshold = 5; 
+
+  if (scrollTop + clientHeight >= scrollHeight - threshold) {
+    // Jab last se first par jayen: Index 0 set karein
+    jumpTo(threshold, 0); 
+  } else if (scrollTop <= 0) {
+    // Jab first se last par jayen: Aakhri Index set karein
+    jumpTo(scrollHeight - clientHeight - threshold, allVideos.length - 1);
+  }
+};
+
+const jumpTo = (targetPosition, manualIndex) => {
+  isAdjusting.current = true;
+  const container = containerRef.current;
+
+  // 1. Snap aur Observer ka masla khatam karne ke liye index foran update karein
+  setCurrentIndex(manualIndex);
+  
+  container.style.scrollSnapType = "none";
+  container.style.scrollBehavior = "auto";
+
+  // 2. Jump karein
+  container.scrollTop = targetPosition;
+
+  // 3. Double frame check taake jump confirm ho jaye
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      container.style.scrollSnapType = "y mandatory";
+      
+      // Thora sa extra time taake purani scroll velocity khatam ho jaye
       setTimeout(() => {
-        e.target.style.scrollSnapType = "y mandatory";
         isAdjusting.current = false;
-      }, 30);
-    } else if (scrollTop <= 0) {
-      isAdjusting.current = true;
-      e.target.style.scrollSnapType = "none";
-      e.target.scrollTop = scrollHeight - clientHeight - 5;
-      setTimeout(() => {
-        e.target.style.scrollSnapType = "y mandatory";
-        isAdjusting.current = false;
-      }, 30);
-    }
-  };
+      }, 150); 
+    });
+  });
+};
 
   if (allVideos.length === 0) return <div>No Videos</div>;
 
@@ -68,16 +86,15 @@ export default function VideoReel() {
         scrollSnapType: "y mandatory",
         background: "black",
         scrollbarWidth: "none",
-        scrollBehavior: "auto" 
+        scrollBehavior: "auto", // Isko 'auto' hi rehne den reset ke liye
+        WebkitOverflowScrolling: "touch" // For smooth iOS scroll
       }}
     >
       {allVideos.map((url, i) => {
-        // --- EXACT CENTER-BALANCED LOGIC ---
         const range = userLoadCount - 1; 
-        const backBuffer = Math.floor(range / 2); // Pichli videos ka quota
-        const frontBuffer = Math.ceil(range / 2);  // Agli videos ka quota
+        const backBuffer = Math.floor(range / 2);
+        const frontBuffer = Math.ceil(range / 2);
 
-        // Range checks (including Loop/Circular logic)
         const isWithinRange = (i >= currentIndex - backBuffer && i <= currentIndex + frontBuffer);
         const isCircularBack = (currentIndex - backBuffer < 0) && (i >= allVideos.length + (currentIndex - backBuffer));
         const isCircularFront = (currentIndex + frontBuffer >= allVideos.length) && (i < (currentIndex + frontBuffer) % allVideos.length);
@@ -96,7 +113,6 @@ export default function VideoReel() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#000"
             }}
           >
             {shouldLoad ? (
@@ -107,7 +123,7 @@ export default function VideoReel() {
                 total={allVideos.length}
               />
             ) : (
-              <div style={{ background: "#111", width: "100%", height: "100%" }} />
+              <div style={{ background: "#000", width: "100%", height: "100%" }} />
             )}
           </div>
         );
