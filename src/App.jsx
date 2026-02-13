@@ -1,6 +1,5 @@
-
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import InputPage from "./component/InputPage";
 import VideoReel from "./component/VideoReel";
 import VideoDetails from "./component/VideoDetails";
