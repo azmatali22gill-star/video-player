@@ -12,6 +12,8 @@ build:
   artifacts:
     paths:
       - dist
+    expire_in: 1 hour   # optional
+    when: always
 
 pages:
   stage: deploy
