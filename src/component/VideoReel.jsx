@@ -14,7 +14,6 @@ export default function VideoReel() {
   useEffect(() => {
   const observer = new IntersectionObserver(
     (entries) => {
-      // Sirf tab update karein jab hum jump NA kar rahe hon
       if (isAdjusting.current) return; 
 
       entries.forEach((entry) => {
@@ -30,7 +29,7 @@ export default function VideoReel() {
   const elements = document.querySelectorAll(".v-container");
   elements.forEach((el) => observer.observe(el));
   return () => observer.disconnect();
-}, [allVideos]); // currentIndex ko yahan dependency mein mat dalna
+}, [allVideos]); 
 
   const handleScroll = (e) => {
   const container = e.target;
@@ -40,10 +39,8 @@ export default function VideoReel() {
   const threshold = 5; 
 
   if (scrollTop + clientHeight >= scrollHeight - threshold) {
-    // Jab last se first par jayen: Index 0 set karein
     jumpTo(threshold, 0); 
   } else if (scrollTop <= 0) {
-    // Jab first se last par jayen: Aakhri Index set karein
     jumpTo(scrollHeight - clientHeight - threshold, allVideos.length - 1);
   }
 };
@@ -52,21 +49,18 @@ const jumpTo = (targetPosition, manualIndex) => {
   isAdjusting.current = true;
   const container = containerRef.current;
 
-  // 1. Snap aur Observer ka masla khatam karne ke liye index foran update karein
   setCurrentIndex(manualIndex);
   
   container.style.scrollSnapType = "none";
   container.style.scrollBehavior = "auto";
 
-  // 2. Jump karein
+  
   container.scrollTop = targetPosition;
 
-  // 3. Double frame check taake jump confirm ho jaye
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       container.style.scrollSnapType = "y mandatory";
       
-      // Thora sa extra time taake purani scroll velocity khatam ho jaye
       setTimeout(() => {
         isAdjusting.current = false;
       }, 150); 
@@ -86,8 +80,8 @@ const jumpTo = (targetPosition, manualIndex) => {
         scrollSnapType: "y mandatory",
         background: "black",
         scrollbarWidth: "none",
-        scrollBehavior: "auto", // Isko 'auto' hi rehne den reset ke liye
-        WebkitOverflowScrolling: "touch" // For smooth iOS scroll
+        scrollBehavior: "auto", 
+        WebkitOverflowScrolling: "touch" 
       }}
     >
       {allVideos.map((url, i) => {
@@ -130,4 +124,4 @@ const jumpTo = (targetPosition, manualIndex) => {
       })}
     </div>
   );
-}
+}          
